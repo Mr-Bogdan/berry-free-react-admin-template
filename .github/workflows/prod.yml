@@ -1,39 +1,61 @@
-name: Node - SSH deploy
+name: AWS CodeCommit Mirror
 
 # Controls when the action will run.
 on:
-    # Triggers the workflow on push or pull request events but only for the master branch
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
+  push:
+    tags-ignore:
+      - '*'
+    branches:
+      - '*'
 
 jobs:
-    SFTP-deploy:
-        name: 🎉 Deploy
-        runs-on: ubuntu-latest
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-        steps:
-            - name: 🚚 Get latest code
-              uses: actions/checkout@v2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1.0.3
+        with:
+          aws-access-key-id: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.TEST_AWS_REGION }}
 
-            - name: Use Node.js 16
-              uses: actions/setup-node@v2-beta
-              with:
-                  node-version: '16'
+      - name: Sync up to CodeCommit
+        uses: tsgit18/sync-up-to-codecommit-action@v1
+        with:
+          repository_name: test
+          aws_region: ${{ secrets.TEST_AWS_REGION }}
 
-            - name: 🔨 Build Project
-              run: |
-                  yarn
-                  yarn build
 
-            - name: 📂 Deploy to Server
-              uses: easingthemes/ssh-deploy@v2.1.5
-              env:
-                  SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
-                  # ARGS: "-rltgoDzvO --delete"
-                  SOURCE: 'build/'
-                  REMOTE_HOST: 192.34.62.123
-                  REMOTE_USER: berry
-                  TARGET: public_html/free
-                  EXCLUDE: '/dist/, /node_modules/'
+    # SFTP-deploy:
+    #     name: 🎉 Deploy
+    #     runs-on: ubuntu-latest
+
+    #     steps:
+    #         - name: 🚚 Get latest code
+    #           uses: actions/checkout@v2
+
+    #         - name: Use Node.js 16
+    #           uses: actions/setup-node@v2-beta
+    #           with:
+    #               node-version: '16'
+
+    #         - name: 🔨 Build Project
+    #           run: |
+    #               yarn
+    #               yarn build
+
+    #         - name: 📂 Deploy to Server
+    #           uses: easingthemes/ssh-deploy@v2.1.5
+    #           env:
+    #               SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+    #               # ARGS: "-rltgoDzvO --delete"
+    #               SOURCE: 'build/'
+    #               REMOTE_HOST: 192.34.62.123
+    #               REMOTE_USER: berry
+    #               TARGET: public_html/free
+    #               EXCLUDE: '/dist/, /node_modules/'
